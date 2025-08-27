@@ -32,7 +32,6 @@ function App() {
           theme="dark"
           mode="horizontal"
           selectedKeys={[selectedKey]}
-          onClick={(e) => history.push(e.key)}
           items={[
             { key: '/', icon: <HomeOutlined />, label: <Link to="/">Home</Link> },
             { key: '/about', icon: <InfoCircleOutlined />, label: <Link to="/about">About</Link> },
