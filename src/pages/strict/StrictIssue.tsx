@@ -6,7 +6,7 @@ const StrictIssue: React.FC = () => {
   const [ticks, setTicks] = useState(0)
 
   useEffect(() => {
-    const id = setInterval(() => {
+    setInterval(() => {
       setTicks((t) => t + 1)
     }, 1000)
 
