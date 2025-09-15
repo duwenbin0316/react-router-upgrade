@@ -5,6 +5,7 @@ const StrictEvent: React.FC = () => {
 
   useEffect(() => {
     const onResize = () => setResizes((n) => n + 1)
+
     window.addEventListener('resize', onResize)
     // Intentionally no cleanup to show duplicate listeners in StrictMode dev
     // return () => window.removeEventListener('resize', onResize)

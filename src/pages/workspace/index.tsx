@@ -34,7 +34,9 @@ const Workspace: React.FC = () => {
           selectedKeys={[key]}
           onClick={(e) => {
             if (e.key === 'editor') history.push(`${url}/editor`)
+
             if (e.key === 'form') history.push(`${url}/form`)
+
             if (e.key === 'table') history.push(`${url}/table`)
           }}
           items={[

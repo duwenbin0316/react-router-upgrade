@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 
 const Editor: React.FC = () => {
   const [text, setText] = useState('')
+
   return (
     <div>
       <h3>Editor</h3>

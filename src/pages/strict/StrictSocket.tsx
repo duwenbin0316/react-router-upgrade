@@ -9,6 +9,7 @@ const StrictSocket: React.FC = () => {
       open: true,
       close() { this.open = false },
     }
+
     setConnected(socket.open)
 
     // No cleanup: in StrictMode dev, two sockets remain "open"

@@ -5,6 +5,7 @@ const FormPage: React.FC = () => {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [agree, setAgree] = useState(false)
+
   return (
     <div>
       <h3>Form</h3>

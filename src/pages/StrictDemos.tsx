@@ -37,10 +37,15 @@ const StrictDemos: React.FC = () => {
           selectedKeys={[selectedKey]}
           onClick={(e) => {
             if (e.key === 'home') history.push(`${url}`)
+
             if (e.key === 'issue') history.push(`${url}/issue`)
+
             if (e.key === 'event') history.push(`${url}/event`)
+
             if (e.key === 'post') history.push(`${url}/post`)
+
             if (e.key === 'socket') history.push(`${url}/socket`)
+
             if (e.key === 'sdk') history.push(`${url}/sdk`)
           }}
           items={[

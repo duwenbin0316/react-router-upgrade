@@ -53,10 +53,15 @@ const Dashboard: React.FC = () => {
           selectedKeys={[selectedKey]}
           onClick={(e) => {
             if (e.key === 'home') history.push(`${url}`)
+
             if (e.key === 'profile') history.push(`${url}/profile`)
+
             if (e.key === 'settings') history.push(`${url}/settings`)
+
             if (e.key === 'reports') history.push(`${url}/reports`)
+
             if (e.key === 'analytics') history.push(`${url}/analytics`)
+
             if (e.key === 'messages') history.push(`${url}/messages`)
           }}
           items={[

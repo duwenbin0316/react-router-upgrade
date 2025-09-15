@@ -4,7 +4,9 @@ let sdkInstance: { inited: boolean } | null = null
 
 const initSDK = () => {
   if (sdkInstance) return sdkInstance
+
   sdkInstance = { inited: true }
+
   return sdkInstance
 }
 
@@ -14,6 +16,7 @@ const StrictSDK: React.FC = () => {
   useEffect(() => {
     // Incorrect: init called in effect without guarding or cleanup
     const inst = initSDK()
+
     if (inst) setCount((n) => n + 1)
     // In development + StrictMode, effect runs twice, count increments twice
   }, [])

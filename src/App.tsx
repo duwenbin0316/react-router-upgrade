@@ -1,7 +1,7 @@
 import React, { Suspense, useMemo } from 'react'
-import { Link, Route, Switch, useLocation, useHistory } from 'react-router-dom'
+import { Link, Route, Switch, useLocation } from 'react-router-dom'
 import { Layout, Menu } from 'antd'
-import { HomeOutlined, InfoCircleOutlined, DashboardOutlined } from '@ant-design/icons'
+import { HomeOutlined, InfoCircleOutlined, DashboardOutlined, BugOutlined } from '@ant-design/icons'
 import './App.css'
 
 const Home = React.lazy(() => import('./pages/Home'))
@@ -10,17 +10,24 @@ const Dashboard = React.lazy(() => import('./pages/dashboard'))
 const Workspace = React.lazy(() => import('./pages/workspace'))
 const StrictDemos = React.lazy(() => import('./pages/StrictDemos'))
 const ReduxNavigateDemo = React.lazy(() => import('./pages/ReduxNavigateDemo'))
+const DebugTest = React.lazy(() => import('./pages/DebugTest'))
 
 function App() {
   const location = useLocation()
-  const history = useHistory()
 
   const selectedKey = useMemo(() => {
     if (location.pathname.startsWith('/dashboard')) return '/dashboard'
+
     if (location.pathname.startsWith('/about')) return '/about'
+
     if (location.pathname.startsWith('/strict')) return '/strict'
+
     if (location.pathname.startsWith('/workspace')) return '/workspace'
+
     if (location.pathname.startsWith('/redux-nav')) return '/redux-nav'
+
+    if (location.pathname.startsWith('/debug-test')) return '/debug-test'
+
     return '/'
   }, [location.pathname])
 
@@ -39,6 +46,7 @@ function App() {
             { key: '/strict', label: <Link to="/strict">Strict Demos</Link> },
             { key: '/workspace', label: <Link to="/workspace/editor">Workspace</Link> },
             { key: '/redux-nav', label: <Link to="/redux-nav">Redux Nav</Link> },
+            { key: '/debug-test', icon: <BugOutlined />, label: <Link to="/debug-test">Debug Test</Link> },
           ]}
         />
       </Layout.Header>
@@ -51,6 +59,7 @@ function App() {
             <Route path="/strict" component={StrictDemos} />
             <Route path="/workspace" component={Workspace} />
             <Route path="/redux-nav" component={ReduxNavigateDemo} />
+            <Route path="/debug-test" component={DebugTest} />
             <Route render={() => <div>Not Found</div>} />
           </Switch>
         </Suspense>
