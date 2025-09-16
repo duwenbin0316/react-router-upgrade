@@ -587,14 +587,15 @@ export class DebugPanel {
     if (jsonClearBtn) jsonClearBtn.addEventListener('click', () => { jsonInput.value=''; jsonOutput.value=''; jsonErr.style.display='none' })
 
     // 快捷键 Cmd/Ctrl+Enter 执行主操作
-    this.panel.addEventListener('keydown', (e) => {
+    this._onKeyDown = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
         // 主操作：URL Encode / Unicode Decode / JSON 格式化
         if (document.activeElement === urlInput) urlEncodeBtn?.click()
         else if (document.activeElement === uniInput) uniDecodeBtn?.click()
         else if (document.activeElement === jsonInput) jsonFormatBtn?.click()
       }
-    })
+    }
+    this.panel.addEventListener('keydown', this._onKeyDown)
 
     // 持久化最近输入
     if (this.dependencies.storage) {
@@ -1468,6 +1469,9 @@ export class DebugPanel {
     }
 
     handleEl.addEventListener('mousedown', onMouseDown)
+    // 保存以便 destroy 清理
+    this._onMouseMove = onMouseMove
+    this._onMouseUp = onMouseUp
   }
 
   /**
@@ -1604,6 +1608,14 @@ export class DebugPanel {
    * 销毁调试面板
    */
   destroy() {
+    // 移除全局拖拽监听
+    if (this._onMouseMove) document.removeEventListener('mousemove', this._onMouseMove)
+    if (this._onMouseUp) document.removeEventListener('mouseup', this._onMouseUp)
+
+    // 清理键盘监听
+    if (this._onKeyDown) this.panel?.removeEventListener('keydown', this._onKeyDown)
+
+    // 移除面板与按钮
     if (this.panel && this.panel.parentNode) {
       this.panel.parentNode.removeChild(this.panel)
     }

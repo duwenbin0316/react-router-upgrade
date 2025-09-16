@@ -1,6 +1,6 @@
 {
   "name": "mini-debug-sdk",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A lightweight network request interception and debugging SDK",
   "main": "dist/index.js",
   "module": "src/index.js",
