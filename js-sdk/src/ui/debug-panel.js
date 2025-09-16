@@ -97,7 +97,8 @@ export class DebugPanel {
     const tabs = [
       { id: 'network', label: '网络记录' },
       { id: 'requests', label: '请求列表' },
-      { id: 'other', label: '其他' }
+      { id: 'tools-encode', label: '编解码' },
+      { id: 'tools-json', label: 'JSON' }
     ]
 
     tabs.forEach((tab, index) => {
@@ -135,7 +136,7 @@ export class DebugPanel {
     // 网络记录标签页
     const networkTab = document.createElement('div')
     networkTab.id = 'network-tab'
-    networkTab.style.display = 'block'
+    networkTab.style.display = 'none'
 
     const networkHeader = document.createElement('div')
     networkHeader.style.cssText = `
@@ -257,17 +258,110 @@ export class DebugPanel {
     requestsTab.appendChild(requestHeader)
     requestsTab.appendChild(requestList)
 
-    // 其他标签页
-    const otherTab = document.createElement('div')
-    otherTab.id = 'other-tab'
-    otherTab.style.display = 'none'
-    otherTab.innerHTML = '<div style="opacity: 0.6;">（待扩展）</div>'
+    // 编解码标签页（URL + Unicode）
+    const encodeTab = document.createElement('div')
+    encodeTab.id = 'tools-encode-tab'
+    encodeTab.style.display = 'none'
+    encodeTab.style.cssText = `
+      display: grid;
+      gap: 10px;
+    `
+
+    // URL 工具块
+    const urlBlock = document.createElement('div')
+    urlBlock.style.cssText = `
+      padding: 8px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 6px;
+    `
+    urlBlock.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div style="font-weight:600;color:#fff;">URL 编解码</div>
+        <button id="url-clear" style="padding:2px 6px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#ccc;border-radius:4px;cursor:pointer;font-size:11px;">清空</button>
+      </div>
+      <textarea id="url-input" style="width:100%;height:70px;background:rgba(0,0,0,0.3);border:1px solid #434343;border-radius:4px;padding:8px;color:#fff;font-family:'Courier New',monospace;font-size:11px;resize:vertical;box-sizing:border-box;font-weight:700;"></textarea>
+      <div style="display:flex;gap:8px;align-items:center;margin:8px 0;">
+        <button id="url-encode" style="padding:4px 8px;border:1px solid #1677ff;background:#1677ff;color:#fff;border-radius:4px;cursor:pointer;font-size:12px;">Encode</button>
+        <button id="url-decode" style="padding:4px 8px;border:1px solid #1677ff;background:#1677ff;color:#fff;border-radius:4px;cursor:pointer;font-size:12px;">Decode</button>
+        <label style="display:flex;align-items:center;gap:6px;color:#ddd;font-size:12px;">
+          <input id="url-only-query" type="checkbox" /> 仅处理 query
+        </label>
+        <button id="url-copy" style="margin-left:auto;padding:4px 8px;border:1px solid #434343;background:transparent;color:#fff;border-radius:4px;cursor:pointer;font-size:12px;">复制输出</button>
+      </div>
+      <textarea id="url-output" readonly style="width:100%;height:70px;background:rgba(0,0,0,0.3);border:1px solid #434343;border-radius:4px;padding:8px;color:#fff;font-family:'Courier New',monospace;font-size:11px;resize:vertical;box-sizing:border-box;font-weight:700;"></textarea>
+      <div id="url-error" style="display:none;color:#ff4d4f;font-size:12px;margin-top:4px;"></div>
+    `
+
+    // Unicode 工具块
+    const uniBlock = document.createElement('div')
+    uniBlock.style.cssText = `
+      padding: 8px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 6px;
+    `
+    uniBlock.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div style="font-weight:600;color:#fff;">Unicode 编解码</div>
+        <button id="uni-clear" style="padding:2px 6px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#ccc;border-radius:4px;cursor:pointer;font-size:11px;">清空</button>
+      </div>
+      <textarea id="uni-input" style="width:100%;height:70px;background:rgba(0,0,0,0.3);border:1px solid #434343;border-radius:4px;padding:8px;color:#fff;font-family:'Courier New',monospace;font-size:11px;resize:vertical;box-sizing:border-box;font-weight:700;"></textarea>
+      <div style="display:flex;gap:8px;align-items:center;margin:8px 0;">
+        <button id="uni-encode" style="padding:4px 8px;border:1px solid #1677ff;background:#1677ff;color:#fff;border-radius:4px;cursor:pointer;font-size:12px;">Encode</button>
+        <button id="uni-decode" style="padding:4px 8px;border:1px solid #1677ff;background:#1677ff;color:#fff;border-radius:4px;cursor:pointer;font-size:12px;">Decode</button>
+        <button id="uni-copy" style="margin-left:auto;padding:4px 8px;border:1px solid #434343;background:transparent;color:#fff;border-radius:4px;cursor:pointer;font-size:12px;">复制输出</button>
+      </div>
+      <textarea id="uni-output" readonly style="width:100%;height:70px;background:rgba(0,0,0,0.3);border:1px solid #434343;border-radius:4px;padding:8px;color:#fff;font-family:'Courier New',monospace;font-size:11px;resize:vertical;box-sizing:border-box;font-weight:700;"></textarea>
+      <div id="uni-error" style="display:none;color:#ff4d4f;font-size:12px;margin-top:4px;"></div>
+    `
+
+    // JSON 标签页（仅 JSON 工具）
+    const jsonTab = document.createElement('div')
+    jsonTab.id = 'tools-json-tab'
+    jsonTab.style.display = 'none'
+    const jsonBlock = document.createElement('div')
+    jsonBlock.style.cssText = `
+      padding: 8px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 6px;
+    `
+    jsonBlock.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div style="font-weight:600;color:#fff;">JSON 格式化（宽松）</div>
+        <button id="json-clear" style="padding:2px 6px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#ccc;border-radius:4px;cursor:pointer;font-size:11px;">清空</button>
+      </div>
+      <textarea id="json-input" style="width:100%;height:90px;background:rgba(0,0,0,0.3);border:1px solid #434343;border-radius:4px;padding:8px;color:#fff;font-family:'Courier New',monospace;font-size:11px;resize:vertical;box-sizing:border-box;font-weight:700;"></textarea>
+      <div style="display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap;">
+        <button id="json-format" style="padding:4px 8px;border:1px solid #1677ff;background:#1677ff;color:#fff;border-radius:4px;cursor:pointer;font-size:12px;">格式化</button>
+        <button id="json-minify" style="padding:4px 8px;border:1px solid #434343;background:transparent;color:#fff;border-radius:4px;cursor:pointer;font-size:12px;">压缩</button>
+        <label style="display:flex;align-items:center;gap:6px;color:#ddd;font-size:12px;">
+          缩进：
+          <select id="json-indent" style="padding:2px 6px;background:transparent;color:#fff;border:1px solid #434343;border-radius:4px;">
+            <option value="2">2</option>
+            <option value="4">4</option>
+          </select>
+        </label>
+        <button id="json-copy" style="margin-left:auto;padding:4px 8px;border:1px solid #434343;background:transparent;color:#fff;border-radius:4px;cursor:pointer;font-size:12px;">复制输出</button>
+      </div>
+      <textarea id="json-output" readonly style="width:100%;height:120px;background:rgba(0,0,0,0.3);border:1px solid #434343;border-radius:4px;padding:8px;color:#fff;font-family:'Courier New',monospace;font-size:11px;resize:vertical;box-sizing:border-box;font-weight:700;"></textarea>
+      <div id="json-error" style="display:none;color:#ff4d4f;font-size:12px;margin-top:4px;"></div>
+    `
+
+    encodeTab.appendChild(urlBlock)
+    encodeTab.appendChild(uniBlock)
+    jsonTab.appendChild(jsonBlock)
 
     content.appendChild(networkTab)
     content.appendChild(requestsTab)
-    content.appendChild(otherTab)
+    content.appendChild(encodeTab)
+    content.appendChild(jsonTab)
 
     this.panel.appendChild(content)
+
+    // 确保初始只显示第一个标签
+    this.switchTab(1)
   }
 
   /**
@@ -317,6 +411,210 @@ export class DebugPanel {
       this.dependencies.networkLogger.addListener('uniqueRequestsUpdated', (uniqueRequests) => {
         this.updateRequestList(uniqueRequests)
       })
+    }
+
+    // 其他工具事件绑定
+    const $ = (id) => this.panel.querySelector(id)
+
+    // URL 工具
+    const urlInput = $('#url-input')
+    const urlOutput = $('#url-output')
+    const urlErr = $('#url-error')
+    const urlOnlyQuery = $('#url-only-query')
+    const urlEncodeBtn = $('#url-encode')
+    const urlDecodeBtn = $('#url-decode')
+    const urlCopyBtn = $('#url-copy')
+    const urlClearBtn = $('#url-clear')
+
+    if (urlEncodeBtn) {
+      urlEncodeBtn.addEventListener('click', () => {
+        urlErr.style.display = 'none'
+        try {
+          const text = urlInput.value || ''
+          if (urlOnlyQuery.checked) {
+            const idx = text.indexOf('?')
+            if (idx >= 0) {
+              const base = text.slice(0, idx)
+              const query = text.slice(idx + 1)
+              urlOutput.value = base + '?' + encodeURIComponent(query)
+            } else {
+              urlOutput.value = encodeURIComponent(text)
+            }
+          } else {
+            urlOutput.value = encodeURIComponent(text)
+          }
+        } catch (e) {
+          urlErr.textContent = '编码失败：' + e.message
+          urlErr.style.display = 'block'
+        }
+      })
+    }
+    if (urlDecodeBtn) {
+      urlDecodeBtn.addEventListener('click', () => {
+        urlErr.style.display = 'none'
+        try {
+          const text = urlInput.value || ''
+          if (urlOnlyQuery.checked) {
+            const idx = text.indexOf('?')
+            if (idx >= 0) {
+              const base = text.slice(0, idx)
+              const query = text.slice(idx + 1)
+              urlOutput.value = base + '?' + decodeURIComponent(query)
+            } else {
+              urlOutput.value = decodeURIComponent(text)
+            }
+          } else {
+            urlOutput.value = decodeURIComponent(text)
+          }
+        } catch (e) {
+          urlErr.textContent = '解码失败：' + e.message
+          urlErr.style.display = 'block'
+        }
+      })
+    }
+    if (urlCopyBtn) {
+      urlCopyBtn.addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(urlOutput.value || '') } catch {}
+      })
+    }
+    if (urlClearBtn) {
+      urlClearBtn.addEventListener('click', () => { urlInput.value = ''; urlOutput.value = ''; urlErr.style.display = 'none' })
+    }
+
+    // Unicode 工具
+    const uniInput = $('#uni-input')
+    const uniOutput = $('#uni-output')
+    const uniErr = $('#uni-error')
+    const uniEncodeBtn = $('#uni-encode')
+    const uniDecodeBtn = $('#uni-decode')
+    const uniCopyBtn = $('#uni-copy')
+    const uniClearBtn = $('#uni-clear')
+
+    const encodeUnicode = (str) => {
+      let out = ''
+      for (let i = 0; i < str.length; i++) {
+        const code = str.charCodeAt(i)
+        if (code < 128) {
+          out += str[i]
+        } else {
+          out += '\\u' + ('000' + code.toString(16)).slice(-4)
+        }
+      }
+      return out
+    }
+    const decodeUnicode = (str) => {
+      return str
+        .replace(/\\u([0-9a-fA-F]{4})/g, (_, g1) => String.fromCharCode(parseInt(g1, 16)))
+        .replace(/\\x([0-9a-fA-F]{2})/g, (_, g1) => String.fromCharCode(parseInt(g1, 16)))
+    }
+
+    if (uniEncodeBtn) {
+      uniEncodeBtn.addEventListener('click', () => {
+        uniErr.style.display = 'none'
+        try {
+          uniOutput.value = encodeUnicode(uniInput.value || '')
+        } catch (e) {
+          uniErr.textContent = '编码失败：' + e.message
+          uniErr.style.display = 'block'
+        }
+      })
+    }
+    if (uniDecodeBtn) {
+      uniDecodeBtn.addEventListener('click', () => {
+        uniErr.style.display = 'none'
+        try {
+          uniOutput.value = decodeUnicode(uniInput.value || '')
+        } catch (e) {
+          uniErr.textContent = '解码失败：' + e.message
+          uniErr.style.display = 'block'
+        }
+      })
+    }
+    if (uniCopyBtn) {
+      uniCopyBtn.addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(uniOutput.value || '') } catch {}
+      })
+    }
+    if (uniClearBtn) {
+      uniClearBtn.addEventListener('click', () => { uniInput.value = ''; uniOutput.value = ''; uniErr.style.display = 'none' })
+    }
+
+    // JSON 工具（宽松解析）
+    const jsonInput = $('#json-input')
+    const jsonOutput = $('#json-output')
+    const jsonErr = $('#json-error')
+    const jsonFormatBtn = $('#json-format')
+    const jsonMinifyBtn = $('#json-minify')
+    const jsonIndentSel = $('#json-indent')
+    const jsonCopyBtn = $('#json-copy')
+    const jsonClearBtn = $('#json-clear')
+
+    const stripComments = (s) => s
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/(^|[^:])\/\/.*$/gm, '$1')
+    const removeTrailingCommas = (s) => s
+      .replace(/,\s*([}\]])/g, '$1')
+    const singleToDoubleQuotes = (s) => s
+      .replace(/'(?:\\.|[^'\\])*'/g, (m) => {
+        const inner = m.slice(1, -1).replace(/\\"/g, '"').replace(/"/g, '\\"')
+        return '"' + inner + '"'
+      })
+    const lenientParse = (text) => {
+      let t = text
+      t = stripComments(t)
+      t = removeTrailingCommas(t)
+      try { return JSON.parse(t) } catch {}
+      t = singleToDoubleQuotes(t)
+      return JSON.parse(t)
+    }
+
+    const formatJson = (minify = false) => {
+      jsonErr.style.display = 'none'
+      try {
+        const raw = jsonInput.value || ''
+        const obj = lenientParse(raw)
+        const indent = minify ? 0 : parseInt(jsonIndentSel.value || '2', 10)
+        jsonOutput.value = JSON.stringify(obj, null, indent)
+      } catch (e) {
+        jsonErr.textContent = 'JSON 解析失败：' + e.message
+        jsonErr.style.display = 'block'
+      }
+    }
+
+    if (jsonFormatBtn) jsonFormatBtn.addEventListener('click', () => formatJson(false))
+    if (jsonMinifyBtn) jsonMinifyBtn.addEventListener('click', () => formatJson(true))
+    if (jsonCopyBtn) jsonCopyBtn.addEventListener('click', async () => { try { await navigator.clipboard.writeText(jsonOutput.value || '') } catch {} })
+    if (jsonClearBtn) jsonClearBtn.addEventListener('click', () => { jsonInput.value=''; jsonOutput.value=''; jsonErr.style.display='none' })
+
+    // 快捷键 Cmd/Ctrl+Enter 执行主操作
+    this.panel.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        // 主操作：URL Encode / Unicode Decode / JSON 格式化
+        if (document.activeElement === urlInput) urlEncodeBtn?.click()
+        else if (document.activeElement === uniInput) uniDecodeBtn?.click()
+        else if (document.activeElement === jsonInput) jsonFormatBtn?.click()
+      }
+    })
+
+    // 持久化最近输入
+    if (this.dependencies.storage) {
+      const S = this.dependencies.storage
+      // 恢复
+      const sUrl = S.get('other_url_input'); if (sUrl) urlInput.value = sUrl
+      const sUni = S.get('other_uni_input'); if (sUni) uniInput.value = sUni
+      const sJson = S.get('other_json_input'); if (sJson) jsonInput.value = sJson
+      const sIndent = S.get('other_json_indent'); if (sIndent) jsonIndentSel.value = String(sIndent)
+      const sOnlyQ = S.get('other_url_only_query'); if (sOnlyQ) urlOnlyQuery.checked = !!sOnlyQ
+      // 保存
+      const saveDebounced = (key, getter) => {
+        let t
+        return () => { clearTimeout(t); t = setTimeout(() => { S.set(key, getter()) }, 200) }
+      }
+      urlInput.addEventListener('input', saveDebounced('other_url_input', () => urlInput.value))
+      uniInput.addEventListener('input', saveDebounced('other_uni_input', () => uniInput.value))
+      jsonInput.addEventListener('input', saveDebounced('other_json_input', () => jsonInput.value))
+      jsonIndentSel.addEventListener('change', () => S.set('other_json_indent', parseInt(jsonIndentSel.value, 10)))
+      urlOnlyQuery.addEventListener('change', () => S.set('other_url_only_query', urlOnlyQuery.checked))
     }
   }
 
@@ -925,13 +1223,7 @@ export class DebugPanel {
       }
     })
 
-    // 点击遮罩层关闭
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) {
-        document.body.removeChild(overlay)
-        if (onCancel) onCancel()
-      }
-    })
+    // 禁用点击遮罩关闭，仅通过按钮关闭
   }
 
   /**
@@ -1055,13 +1347,7 @@ export class DebugPanel {
       }
     })
 
-    // 点击遮罩层关闭
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) {
-        document.body.removeChild(overlay)
-        if (onCancel) onCancel()
-      }
-    })
+    // 禁用点击遮罩关闭，仅通过按钮关闭
   }
 
   /**
@@ -1298,7 +1584,7 @@ export class DebugPanel {
    * 切换标签页
    */
   switchTab(index) {
-    const tabs = this.panel.querySelectorAll('button')
+    const tabs = Array.from(this.panel.querySelectorAll('div > button'))
     const contents = this.panel.querySelectorAll('[id$="-tab"]')
 
     // 更新标签页内容显示
@@ -1308,11 +1594,9 @@ export class DebugPanel {
 
     // 更新标签按钮样式
     tabs.forEach((tab, i) => {
-      if (i < 3) { // 只处理前3个标签按钮
-        const isActive = (i + 1) === index
-        tab.style.background = isActive ? 'rgba(22,119,255,0.35)' : 'rgba(255,255,255,0.08)'
-        tab.style.borderColor = isActive ? 'rgba(22,119,255,0.6)' : 'rgba(255,255,255,0.15)'
-      }
+      const isActive = (i + 1) === index
+      tab.style.background = isActive ? 'rgba(22,119,255,0.35)' : 'rgba(255,255,255,0.08)'
+      tab.style.borderColor = isActive ? 'rgba(22,119,255,0.6)' : 'rgba(255,255,255,0.15)'
     })
   }
 
@@ -1434,6 +1718,7 @@ export class DebugPanel {
             font-size: 11px;
             resize: vertical;
             box-sizing: border-box;
+            font-weight: 700;
           ">${JSON.stringify(requestParams, null, 2)}</textarea>
         </div>
 
@@ -1517,12 +1802,7 @@ export class DebugPanel {
       }
     })
 
-    // 点击遮罩关闭
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay && !isSending) {
-        document.body.removeChild(overlay)
-      }
-    })
+    // 禁用点击遮罩关闭，仅通过取消按钮关闭
 
     // 开始发送按钮
     startBtn.addEventListener('click', async () => {

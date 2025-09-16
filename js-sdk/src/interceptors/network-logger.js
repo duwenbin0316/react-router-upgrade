@@ -633,6 +633,14 @@ export class NetworkLogger {
   }
 
   /**
+   * 清空日志列表
+   */
+  clearLogs() {
+    this.logs = []
+    // 可选：通知监听者刷新（沿用 uniqueRequestsUpdated 不合适，这里仅清空网络面板由 UI 自己处理）
+  }
+
+  /**
    * 获取唯一请求列表
    */
   getUniqueRequests() {
