@@ -139,12 +139,50 @@ export class DebugPanel {
 
     const networkHeader = document.createElement('div')
     networkHeader.style.cssText = `
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       margin-top: 10px;
       margin-bottom: 6px;
+    `
+    
+    const networkTitle = document.createElement('div')
+    networkTitle.style.cssText = `
       font-weight: 600;
       color: #fff;
     `
-    networkHeader.textContent = 'Network'
+    networkTitle.textContent = 'Network'
+    
+    const clearNetworkBtn = document.createElement('button')
+    clearNetworkBtn.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M6 7h12l-1 13a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 7z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        <path d="M4 7h16" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+    `
+    clearNetworkBtn.style.cssText = `
+      padding: 4px;
+      border-radius: 4px;
+      background: transparent;
+      color: #aaa;
+      border: 1px solid rgba(255,255,255,0.12);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    `
+    clearNetworkBtn.onmouseenter = () => { clearNetworkBtn.style.color = '#ff4d4f' }
+    clearNetworkBtn.onmouseleave = () => { clearNetworkBtn.style.color = '#aaa' }
+    clearNetworkBtn.title = '清空网络记录'
+    clearNetworkBtn.addEventListener('click', () => {
+      this.clearNetworkLogs()
+    })
+    
+    networkHeader.appendChild(networkTitle)
+    networkHeader.appendChild(clearNetworkBtn)
     
     const networkList = document.createElement('div')
     networkList.id = 'network-list'
@@ -161,15 +199,53 @@ export class DebugPanel {
     requestsTab.id = 'requests-tab'
     requestsTab.style.display = 'none'
     
+    const requestHeader = document.createElement('div')
+    requestHeader.style.cssText = `
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    `
+    
     const requestCount = document.createElement('div')
     requestCount.id = 'request-count'
     requestCount.style.cssText = `
       font-size: 12px;
       opacity: 0.7;
-      margin-bottom: 8px;
       color: #fff;
     `
     requestCount.textContent = '已记录: 0 个唯一请求'
+    
+    const clearRequestsBtn = document.createElement('button')
+    clearRequestsBtn.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M6 7h12l-1 13a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 7z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        <path d="M4 7h16" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+    `
+    clearRequestsBtn.style.cssText = `
+      padding: 4px;
+      border-radius: 4px;
+      background: transparent;
+      color: #aaa;
+      border: 1px solid rgba(255,255,255,0.12);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    `
+    clearRequestsBtn.onmouseenter = () => { clearRequestsBtn.style.color = '#ff4d4f' }
+    clearRequestsBtn.onmouseleave = () => { clearRequestsBtn.style.color = '#aaa' }
+    clearRequestsBtn.title = '清空请求列表'
+    clearRequestsBtn.addEventListener('click', () => {
+      this.clearRequestList()
+    })
+    
+    requestHeader.appendChild(requestCount)
+    requestHeader.appendChild(clearRequestsBtn)
     
     const requestList = document.createElement('div')
     requestList.id = 'request-list'
@@ -178,7 +254,7 @@ export class DebugPanel {
       gap: 6px;
     `
     
-    requestsTab.appendChild(requestCount)
+    requestsTab.appendChild(requestHeader)
     requestsTab.appendChild(requestList)
 
     // 其他标签页
@@ -273,7 +349,7 @@ export class DebugPanel {
       font-weight: 700;
       padding: 2px 6px;
       border-radius: 3px;
-      background: #0958d9;
+      background: ${log.concurrent ? '#52c41a' : '#0958d9'};
       color: #fff;
       min-width: 40px;
       text-align: center;
@@ -326,6 +402,22 @@ export class DebugPanel {
       phaseWrap.appendChild(resBadge)
     }
 
+    // 并发请求标识
+    if (log.concurrent) {
+      const concurrentBadge = document.createElement('span')
+      concurrentBadge.style.cssText = `
+        font-size: 10px;
+        font-weight: 700;
+        padding: 1px 6px;
+        border-radius: 10px;
+        background: #52c41a;
+        color: #000;
+      `
+      concurrentBadge.textContent = `并发${log.concurrentIndex || ''}`
+      concurrentBadge.title = '并发请求'
+      phaseWrap.appendChild(concurrentBadge)
+    }
+
     // 状态
     const statusSpan = document.createElement('span')
     statusSpan.style.cssText = `
@@ -343,11 +435,33 @@ export class DebugPanel {
     `
     timeSpan.textContent = log.timeMs + 'ms'
 
+    // 并发按钮
+    const concurrentBtn = document.createElement('button')
+    concurrentBtn.style.cssText = `
+      font-size: 10px;
+      padding: 2px 6px;
+      border: 1px solid #52c41a;
+      background: rgba(82,196,26,0.1);
+      color: #52c41a;
+      border-radius: 3px;
+      cursor: pointer;
+      margin-left: 4px;
+    `
+    concurrentBtn.textContent = '并发'
+    concurrentBtn.title = '并发发送此请求'
+    
+    // 阻止事件冒泡，避免触发展开/收起
+    concurrentBtn.addEventListener('click', (e) => {
+      e.stopPropagation()
+      this.openConcurrentDialog(log)
+    })
+
     head.appendChild(methodBadge)
     head.appendChild(urlSpan)
     head.appendChild(phaseWrap)
     head.appendChild(statusSpan)
     head.appendChild(timeSpan)
+    head.appendChild(concurrentBtn)
 
     // 创建详情区域
     const details = document.createElement('div')
@@ -1214,4 +1328,373 @@ export class DebugPanel {
     }
     this.isInitialized = false
   }
+
+  /**
+   * 打开并发设置对话框
+   */
+  openConcurrentDialog(log) {
+    // 创建遮罩层
+    const overlay = document.createElement('div')
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 99999999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    `
+
+    // 创建对话框
+    const dialog = document.createElement('div')
+    dialog.style.cssText = `
+      background: #1f1f1f;
+      border: 1px solid #434343;
+      border-radius: 8px;
+      padding: 20px;
+      width: 500px;
+      max-width: 90vw;
+      max-height: 80vh;
+      overflow-y: auto;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    `
+
+    // 解析请求参数
+    let requestParams = {}
+    if (log.method === 'GET') {
+      // GET请求：解析URL参数
+      try {
+        const url = new URL(log.url)
+        const params = {}
+        url.searchParams.forEach((value, key) => {
+          params[key] = value
+        })
+        requestParams = params
+      } catch (e) {
+        requestParams = {}
+      }
+    } else {
+      // POST/PUT等请求：只解析请求体内容
+      if (log.requestData) {
+        if (typeof log.requestData === 'object') {
+          // 如果requestData是对象，检查是否包含body字段
+          if (log.requestData.body) {
+            // 如果有body字段，解析body内容
+            try {
+              requestParams = JSON.parse(log.requestData.body)
+            } catch (e) {
+              // 如果body不是JSON，作为普通字符串处理
+              requestParams = { content: log.requestData.body }
+            }
+          } else {
+            // 如果没有body字段，可能是直接的请求体对象
+            requestParams = log.requestData
+          }
+        } else if (typeof log.requestData === 'string') {
+          try {
+            // 尝试解析为JSON
+            requestParams = JSON.parse(log.requestData)
+          } catch (e) {
+            // 如果不是JSON，作为普通字符串处理
+            requestParams = { content: log.requestData }
+          }
+        }
+      } else {
+        requestParams = {}
+      }
+    }
+
+    dialog.innerHTML = `
+      <div style="margin-bottom: 16px;">
+        <h3 style="margin: 0 0 12px 0; color: #fff; font-size: 16px;">并发发送请求</h3>
+        
+        <div style="margin-bottom: 12px;">
+          <div style="font-size: 13px; color: #fff; margin-bottom: 6px; font-weight: 600;">请求信息：</div>
+          <div style="font-size: 12px; color: #fff; word-break: break-all; font-weight: 500;">
+            <div><strong>URL:</strong> ${log.url}</div>
+            <div><strong>方法:</strong> ${log.method}</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <div style="font-size: 13px; color: #fff; margin-bottom: 6px; font-weight: 600;">请求参数：</div>
+          <textarea id="concurrent-params" style="
+            width: 100%;
+            height: 120px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid #434343;
+            border-radius: 4px;
+            padding: 8px;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            resize: vertical;
+            box-sizing: border-box;
+          ">${JSON.stringify(requestParams, null, 2)}</textarea>
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+          <div style="flex: 1;">
+            <div style="font-size: 13px; color: #fff; margin-bottom: 6px; font-weight: 600;">并发次数：</div>
+            <input type="number" id="concurrent-count" value="10" min="1" max="100" style="
+              width: 100%;
+              padding: 6px;
+              background: rgba(0,0,0,0.3);
+              border: 1px solid #434343;
+              border-radius: 4px;
+              color: #fff;
+              font-size: 12px;
+              box-sizing: border-box;
+            ">
+          </div>
+          <div style="flex: 1;">
+            <div style="font-size: 13px; color: #fff; margin-bottom: 6px; font-weight: 600;">发送间隔(ms)：</div>
+            <input type="number" id="concurrent-interval" value="0" min="0" max="5000" style="
+              width: 100%;
+              padding: 6px;
+              background: rgba(0,0,0,0.3);
+              border: 1px solid #434343;
+              border-radius: 4px;
+              color: #fff;
+              font-size: 12px;
+              box-sizing: border-box;
+            ">
+          </div>
+        </div>
+
+        <div id="concurrent-progress" style="display: none; margin-bottom: 12px;">
+          <div style="font-size: 13px; color: #fff; margin-bottom: 6px; font-weight: 600;">发送进度：</div>
+          <div style="background: rgba(0,0,0,0.3); border-radius: 4px; padding: 8px; font-size: 11px;">
+            <div id="progress-text">准备中...</div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <button id="concurrent-cancel" style="
+            padding: 6px 12px;
+            border: 1px solid #434343;
+            background: transparent;
+            color: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+          ">取消</button>
+          <button id="concurrent-start" style="
+            padding: 6px 12px;
+            border: 1px solid #52c41a;
+            background: #52c41a;
+            color: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+          ">开始发送</button>
+        </div>
+      </div>
+    `
+
+    overlay.appendChild(dialog)
+    document.body.appendChild(overlay)
+
+    // 绑定事件
+    const cancelBtn = dialog.querySelector('#concurrent-cancel')
+    const startBtn = dialog.querySelector('#concurrent-start')
+    const paramsTextarea = dialog.querySelector('#concurrent-params')
+    const countInput = dialog.querySelector('#concurrent-count')
+    const intervalInput = dialog.querySelector('#concurrent-interval')
+    const progressDiv = dialog.querySelector('#concurrent-progress')
+    const progressText = dialog.querySelector('#progress-text')
+
+    let isSending = false
+
+    // 取消按钮
+    cancelBtn.addEventListener('click', () => {
+      if (!isSending) {
+        document.body.removeChild(overlay)
+      }
+    })
+
+    // 点击遮罩关闭
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay && !isSending) {
+        document.body.removeChild(overlay)
+      }
+    })
+
+    // 开始发送按钮
+    startBtn.addEventListener('click', async () => {
+      if (isSending) return
+
+      try {
+        // 验证参数
+        const paramsText = paramsTextarea.value.trim()
+        let modifiedParams = {}
+        
+        if (paramsText) {
+          try {
+            modifiedParams = JSON.parse(paramsText)
+          } catch (e) {
+            alert(`JSON 格式错误：${e.message}`)
+            return
+          }
+        }
+
+        const count = parseInt(countInput.value) || 10
+        const interval = parseInt(intervalInput.value) || 0
+
+        if (count < 1 || count > 100) {
+          alert('并发次数必须在 1-100 之间')
+          return
+        }
+
+        // 开始发送
+        isSending = true
+        startBtn.textContent = '发送中...'
+        startBtn.disabled = true
+        progressDiv.style.display = 'block'
+
+        await this.sendConcurrentRequests(log, modifiedParams, count, interval, progressText)
+
+        // 发送完成
+        startBtn.textContent = '发送完成'
+        setTimeout(() => {
+          document.body.removeChild(overlay)
+        }, 1000)
+
+      } catch (error) {
+        alert(`发送失败：${error.message}`)
+        isSending = false
+        startBtn.textContent = '开始发送'
+        startBtn.disabled = false
+        progressDiv.style.display = 'none'
+      }
+    })
+  }
+
+  /**
+   * 发送并发请求
+   */
+  async sendConcurrentRequests(originalLog, modifiedParams, count, interval, progressText) {
+    const requests = []
+    
+    for (let i = 0; i < count; i++) {
+      const requestPromise = this.sendSingleConcurrentRequest(originalLog, modifiedParams, i + 1)
+      requests.push(requestPromise)
+      
+      // 更新进度
+      progressText.textContent = `发送中... (${i + 1}/${count})`
+      
+      // 发送间隔
+      if (interval > 0 && i < count - 1) {
+        await new Promise(resolve => setTimeout(resolve, interval))
+      }
+    }
+
+    // 等待所有请求完成
+    const results = await Promise.allSettled(requests)
+    
+    // 统计结果
+    const successCount = results.filter(r => r.status === 'fulfilled').length
+    const failCount = results.filter(r => r.status === 'rejected').length
+    
+    progressText.textContent = `发送完成！成功: ${successCount}, 失败: ${failCount}`
+  }
+
+  /**
+   * 发送单个并发请求
+   */
+  async sendSingleConcurrentRequest(originalLog, modifiedParams, index) {
+    const startTime = Date.now()
+    
+    try {
+      let url = originalLog.url
+      let init = {
+        method: originalLog.method,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+
+      // 处理参数
+      if (originalLog.method === 'GET') {
+        // GET请求：将参数添加到URL
+        const urlObj = new URL(url)
+        urlObj.search = ''
+        Object.entries(modifiedParams).forEach(([key, value]) => {
+          if (value !== null && value !== undefined) {
+            urlObj.searchParams.set(key, String(value))
+          }
+        })
+        url = urlObj.toString()
+      } else {
+        // POST/PUT等请求：将参数作为请求体
+        if (Object.keys(modifiedParams).length > 0) {
+          init.body = JSON.stringify(modifiedParams)
+        } else {
+          // 如果没有参数，确保body为空
+          init.body = null
+        }
+      }
+
+      // 标记这是并发请求，避免重复记录
+      window._isConcurrentRequest = true
+      window._concurrentRequestIndex = index
+      
+      // 发送请求（走正常的拦截流程）
+      const response = await window.fetch(url, init)
+      const responseData = await response.text()
+      
+      // 清除标记
+      window._isConcurrentRequest = false
+      window._concurrentRequestIndex = null
+
+      return { success: true, response, timeMs }
+    } catch (error) {
+      // 清除标记
+      window._isConcurrentRequest = false
+      window._concurrentRequestIndex = null
+      
+      throw error
+    }
+  }
+
+  /**
+   * 清空网络记录
+   */
+  clearNetworkLogs() {
+    const networkList = this.panel.querySelector('#network-list')
+    if (networkList) {
+      networkList.innerHTML = ''
+    }
+    
+    // 清空网络日志数据
+    if (this.dependencies && this.dependencies.networkLogger) {
+      this.dependencies.networkLogger.clearLogs()
+    }
+  }
+
+  /**
+   * 清空请求列表
+   */
+  clearRequestList() {
+    const requestList = this.panel.querySelector('#request-list')
+    const requestCount = this.panel.querySelector('#request-count')
+    
+    if (requestList) {
+      requestList.innerHTML = ''
+    }
+    
+    if (requestCount) {
+      requestCount.textContent = '已记录: 0 个唯一请求'
+    }
+    
+    // 清空请求列表数据
+    if (this.dependencies && this.dependencies.networkLogger) {
+      this.dependencies.networkLogger.clearUniqueRequests()
+    }
+  }
+
 }

@@ -38,6 +38,7 @@ export class NetworkLogger {
     }
 
     const originalFetch = window.fetch
+    this.originalFetch = originalFetch // 保存原始fetch供并发请求使用
     const self = this
 
     window.fetch = function(input, init) {
@@ -57,9 +58,9 @@ export class NetworkLogger {
         }
       }
 
-      // 检查是否需要拦截
+      // 检查是否需要拦截（并发请求跳过拦截）
       const rule = self.interceptRules.get(url)
-      if (rule && rule.requestLive) {
+      if (rule && rule.requestLive && !window._isConcurrentRequest) {
         // 实时拦截模式
         return new Promise(function(resolve, reject) {
           const requestInfo = {
@@ -108,9 +109,9 @@ export class NetworkLogger {
                 const timeMs = Date.now() - startTime
                 const responseClone = response.clone()
 
-                // 若同时开启了响应实时拦截，则在此对响应进行弹窗编辑
+                // 若同时开启了响应实时拦截，则在此对响应进行弹窗编辑（并发请求跳过）
                 const latestRule = self.interceptRules.get(url)
-                if (latestRule && latestRule.responseLive) {
+                if (latestRule && latestRule.responseLive && !window._isConcurrentRequest) {
                   responseClone.json().then(function(orig){
                     if (self.openResponseLiveEditor) {
                       self.openResponseLiveEditor({ url: url, method: finalInit.method || 'GET' }, orig, function(edited){
@@ -223,8 +224,8 @@ export class NetworkLogger {
             originalFetch(input, init).then(resolve).catch(reject)
           }
         })
-      } else if (rule && rule.responseLive) {
-        // 只有响应拦截，没有请求拦截
+      } else if (rule && rule.responseLive && !window._isConcurrentRequest) {
+        // 只有响应拦截，没有请求拦截（并发请求跳过）
         return originalFetch(input, init).then(response => {
           const timeMs = Date.now() - startTime
           const responseClone = response.clone()
@@ -431,9 +432,9 @@ export class NetworkLogger {
                     responseData = '[non-text response]'
                   }
 
-                  // 检查是否需要响应拦截
+                  // 检查是否需要响应拦截（并发请求跳过）
                   const currentRule = self.interceptRules.get(_originalUrl)
-                  if (currentRule && currentRule.responseLive) {
+                  if (currentRule && currentRule.responseLive && !window._isConcurrentRequest) {
                     // 响应实时拦截
                     if (self.openResponseLiveEditor) {
                       self.openResponseLiveEditor({ url: _originalUrl, method: _method }, responseData, function(edited) {
@@ -492,8 +493,8 @@ export class NetworkLogger {
             // 没有编辑器，直接发送原始请求
             origSend.call(xhr, _body)
           }
-        } else if (_rule && _rule.responseLive) {
-          // 只有响应拦截，没有请求拦截
+        } else if (_rule && _rule.responseLive && !window._isConcurrentRequest) {
+          // 只有响应拦截，没有请求拦截（并发请求跳过）
           origSend.call(xhr, _body)
 
           xhr.addEventListener('readystatechange', function() {
@@ -579,6 +580,12 @@ export class NetworkLogger {
    * 添加日志
    */
   addLog(log) {
+    // 如果是并发请求，添加并发标识
+    if (window._isConcurrentRequest) {
+      log.concurrent = true
+      log.concurrentIndex = window._concurrentRequestIndex
+    }
+    
     this.logs.push(log)
     
     // 限制日志数量
@@ -724,6 +731,15 @@ export class NetworkLogger {
         }
       })
     }
+  }
+
+  /**
+   * 清空唯一请求列表
+   */
+  clearUniqueRequests() {
+    this.uniqueRequests.clear()
+    this.interceptRules.clear()
+    this.notifyListeners('uniqueRequestsUpdated', this.uniqueRequests)
   }
 
   /**
