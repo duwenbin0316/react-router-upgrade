@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apollo 安全测试工具 - 缓存功能测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        button {
+            background: #1890ff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #40a9ff;
+        }
+        .info {
+            background: #f6ffed;
+            border: 1px solid #b7eb8f;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .warning {
+            background: #fff7e6;
+            border: 1px solid #ffd591;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Apollo 安全测试工具 - 缓存功能测试</h1>
+        
+        <div class="info">
+            <strong>测试说明：</strong>
+            <ol>
+                <li>点击下方按钮发送一些测试请求</li>
+                <li>在工具面板中设置一些拦截规则（REQ/RES）</li>
+                <li>刷新页面，检查拦截规则是否自动恢复</li>
+                <li>再次发送相同请求，验证是否自动拦截</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h3>测试请求</h3>
+            <button onclick="sendGetRequest()">发送 GET 请求</button>
+            <button onclick="sendPostRequest()">发送 POST 请求</button>
+            <button onclick="sendXHRRequest()">发送 XHR 请求</button>
+        </div>
+
+        <div class="test-section">
+            <h3>缓存管理</h3>
+            <button onclick="clearCache()">清空缓存</button>
+            <button onclick="showCache()">查看缓存</button>
+            <div id="cache-info"></div>
+        </div>
+
+        <div class="warning">
+            <strong>注意：</strong>
+            <ul>
+                <li>请确保已打开 Apollo 安全测试工具面板</li>
+                <li>拦截规则会保存在 localStorage 中</li>
+                <li>清空缓存会删除所有保存的拦截规则</li>
+            </ul>
+        </div>
+    </div>
+
+    <script type="module">
+        // 动态导入 SDK
+        import ApolloSecurityTester from './dist/index.esm.js';
+
+        // 初始化工具
+        const tester = ApolloSecurityTester.init().start();
+
+        // 测试请求函数
+        window.sendGetRequest = function() {
+            fetch('https://httpbin.org/get?test=1&cache=test')
+                .then(response => response.json())
+                .then(data => console.log('GET Response:', data))
+                .catch(error => console.error('GET Error:', error));
+        };
+
+        window.sendPostRequest = function() {
+            fetch('https://httpbin.org/post', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    test: 'cache',
+                    timestamp: Date.now()
+                })
+            })
+            .then(response => response.json())
+            .then(data => console.log('POST Response:', data))
+            .catch(error => console.error('POST Error:', error));
+        };
+
+        window.sendXHRRequest = function() {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', 'https://httpbin.org/get?xhr=1&cache=test');
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        console.log('XHR Response:', JSON.parse(xhr.responseText));
+                    } else {
+                        console.error('XHR Error:', xhr.status);
+                    }
+                }
+            };
+            xhr.send();
+        };
+
+        // 缓存管理函数
+        window.clearCache = function() {
+            localStorage.removeItem('__mini_debug_intercept_rules');
+            document.getElementById('cache-info').innerHTML = '<p style="color: green;">缓存已清空</p>';
+        };
+
+        window.showCache = function() {
+            const cache = localStorage.getItem('__mini_debug_intercept_rules');
+            const cacheInfo = document.getElementById('cache-info');
+            
+            if (cache) {
+                try {
+                    const rules = JSON.parse(cache);
+                    cacheInfo.innerHTML = `
+                        <h4>当前缓存的拦截规则：</h4>
+                        <pre style="background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto;">${JSON.stringify(rules, null, 2)}</pre>
+                    `;
+                } catch (e) {
+                    cacheInfo.innerHTML = '<p style="color: red;">缓存数据格式错误</p>';
+                }
+            } else {
+                cacheInfo.innerHTML = '<p style="color: orange;">暂无缓存数据</p>';
+            }
+        };
+
+        // 页面加载时显示当前缓存状态
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                showCache();
+                // 检查请求列表是否显示了缓存的拦截规则
+                setTimeout(() => {
+                    const requestList = document.querySelector('#request-list');
+                    if (requestList) {
+                        const items = requestList.querySelectorAll('.request-item');
+                        console.log('请求列表项目数量:', items.length);
+                        if (items.length > 0) {
+                            document.getElementById('cache-info').innerHTML += 
+                                '<p style="color: green;">✅ 缓存的拦截规则已显示在请求列表中</p>';
+                        } else {
+                            document.getElementById('cache-info').innerHTML += 
+                                '<p style="color: orange;">⚠️ 请求列表为空，可能需要先设置一些拦截规则</p>';
+                        }
+                    }
+                }, 500);
+            }, 1000); // 延迟1秒显示，确保SDK已初始化
+        });
+    </script>
+</body>
+</html>

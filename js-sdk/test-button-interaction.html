@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>按钮交互测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .instructions {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Apollo 安全测试工具 - 按钮交互测试</h1>
+        
+        <div class="instructions">
+            <h3>测试步骤：</h3>
+            <ol>
+                <li>点击下方按钮发送一些测试请求</li>
+                <li>打开工具面板，切换到"请求列表"标签</li>
+                <li>检查缓存的拦截规则是否正确显示（按钮状态和背景色）</li>
+                <li>点击 REQ/RES 按钮，测试切换是否正常</li>
+                <li>刷新页面，验证状态是否保持</li>
+            </ol>
+        </div>
+        
+        <div>
+            <button onclick="sendTestRequests()">发送测试请求</button>
+            <button onclick="clearCache()">清空缓存</button>
+            <button onclick="showCache()">查看缓存</button>
+        </div>
+        
+        <div id="log" class="log">等待测试...</div>
+    </div>
+
+    <script type="module">
+        import ApolloSecurityTester from './dist/index.esm.js';
+
+        const log = document.getElementById('log');
+        
+        function addLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            log.textContent += `${timestamp}: ${message}\n`;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // 初始化工具
+        const tester = ApolloSecurityTester.init().start();
+        addLog('SDK 已初始化');
+
+        // 发送测试请求
+        window.sendTestRequests = function() {
+            addLog('开始发送测试请求...');
+            
+            // 发送多个不同类型的请求
+            const requests = [
+                () => fetch('https://httpbin.org/get?test=button1&type=get'),
+                () => fetch('https://httpbin.org/post', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ test: 'button2', type: 'post' })
+                }),
+                () => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('GET', 'https://httpbin.org/get?test=button3&type=xhr');
+                    xhr.send();
+                    return Promise.resolve();
+                }
+            ];
+
+            let completed = 0;
+            requests.forEach((requestFn, index) => {
+                requestFn()
+                    .then(() => {
+                        completed++;
+                        addLog(`请求 ${index + 1} 完成`);
+                        if (completed === requests.length) {
+                            addLog('所有测试请求完成！');
+                            addLog('请检查工具面板中的请求列表，测试按钮交互');
+                        }
+                    })
+                    .catch(error => {
+                        addLog(`请求 ${index + 1} 失败: ${error.message}`);
+                    });
+            });
+        };
+
+        // 清空缓存
+        window.clearCache = function() {
+            localStorage.removeItem('__mini_debug_intercept_rules');
+            localStorage.removeItem('__mini_debug_toggle_pos_rb');
+            addLog('缓存已清空');
+        };
+
+        // 查看缓存
+        window.showCache = function() {
+            const cache = localStorage.getItem('__mini_debug_intercept_rules');
+            if (cache) {
+                try {
+                    const rules = JSON.parse(cache);
+                    addLog('当前缓存内容:');
+                    addLog(JSON.stringify(rules, null, 2));
+                } catch (e) {
+                    addLog('缓存数据格式错误');
+                }
+            } else {
+                addLog('暂无缓存数据');
+            }
+        };
+
+        // 页面加载时显示当前状态
+        window.addEventListener('load', function() {
+            addLog('测试页面已加载');
+            addLog('请点击"发送测试请求"开始测试');
+            
+            // 检查是否有现有缓存
+            setTimeout(() => {
+                const cache = localStorage.getItem('__mini_debug_intercept_rules');
+                if (cache) {
+                    addLog('检测到现有缓存，请检查工具面板是否正确显示拦截状态');
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
+

@@ -44,9 +44,9 @@ export class DebugPanel {
     this.panel.id = 'mini-debug-panel'
     this.panel.style.cssText = `
       position: fixed;
-      width: 500px;
+      width: 600px;
       max-width: 90vw;
-      height: 320px;
+      height: 380px;
       background: rgba(0,0,0,0.85);
       color: #fff;
       border-radius: 8px;
@@ -77,8 +77,9 @@ export class DebugPanel {
     header.style.cssText = `
       margin-bottom: 8px;
       font-weight: 600;
+      font-size: 14px;
     `
-    header.textContent = '安全测试工具'
+    header.textContent = 'Apollo 安全测试工具'
 
     this.panel.appendChild(header)
   }
@@ -88,6 +89,7 @@ export class DebugPanel {
    */
   createTabs() {
     const tabsContainer = document.createElement('div')
+    tabsContainer.id = 'mini-debug-tabs'
     tabsContainer.style.cssText = `
       display: flex;
       gap: 8px;
@@ -103,6 +105,7 @@ export class DebugPanel {
 
     tabs.forEach((tab, index) => {
       const tabBtn = document.createElement('button')
+      tabBtn.className = 'mini-debug-tab-btn'
       tabBtn.textContent = tab.label
       tabBtn.style.cssText = `
         padding: 4px 8px;
@@ -376,7 +379,7 @@ export class DebugPanel {
       position: fixed;
       width: 48px;
       height: 48px;
-      background: #1677ff;
+      background: #1677ff; /* match primary blue tone */
       color: #fff;
       border: none;
       border-radius: 24px;
@@ -881,10 +884,8 @@ export class DebugPanel {
       display: flex;
       align-items: center;
       gap: 8px;
-      background: ${request.intercepted ? 'rgba(255,193,7,0.15)' : 'rgba(255,255,255,0.06)'};
       padding: 8px 10px;
       border-radius: 6px;
-      border: ${request.intercepted ? '1px solid rgba(255,193,7,0.3)' : '1px solid transparent'};
     `
     item.setAttribute('data-url', request.url)
 
@@ -895,8 +896,6 @@ export class DebugPanel {
       font-weight: 700;
       padding: 3px 8px;
       border-radius: 4px;
-      background: ${request.intercepted ? '#ffc107' : '#0958d9'};
-      color: ${request.intercepted ? '#000' : '#fff'};
     `
     methodBadge.textContent = request.method
 
@@ -938,6 +937,8 @@ export class DebugPanel {
     reqBtn.textContent = 'REQ'
     reqBtn.title = '请求拦截'
 
+    window.reqBtn = reqBtn
+
     // RES 按钮
     const resBtn = document.createElement('button')
     resBtn.style.cssText = `
@@ -977,13 +978,10 @@ export class DebugPanel {
       const newIntercepted = !request.intercepted
       networkLogger.setRequestIntercept(request.url, newIntercepted)
       
-      // 更新按钮样式
-      reqBtn.style.background = newIntercepted ? '#ffc107' : 'rgba(255,255,255,0.1)'
-      reqBtn.style.color = newIntercepted ? '#000' : '#fff'
-      reqBtn.title = newIntercepted ? '取消请求拦截' : '启用请求拦截'
-      
-      // 更新背景色
-      this.updateItemBackground(item, newIntercepted, request.responseIntercept)
+      // 更新按钮状态和背景色
+      request.intercepted = newIntercepted
+      this.updateButtonState(reqBtn, newIntercepted, 'REQ')
+      this.updateItemBackground(item, newIntercepted, request.responseIntercept, methodBadge)
     })
 
     // RES 按钮点击事件
@@ -991,45 +989,69 @@ export class DebugPanel {
       const newResponseIntercept = !request.responseIntercept
       networkLogger.setResponseIntercept(request.url, newResponseIntercept)
       
-      // 更新按钮样式
-      resBtn.style.background = newResponseIntercept ? '#13c2c2' : 'rgba(255,255,255,0.1)'
-      resBtn.style.color = newResponseIntercept ? '#000' : '#fff'
-      resBtn.title = newResponseIntercept ? '取消响应拦截' : '启用响应拦截'
-      
-      // 更新背景色
-      this.updateItemBackground(item, request.intercepted, newResponseIntercept)
+      // 更新按钮状态和背景色
+      request.responseIntercept = newResponseIntercept
+      this.updateButtonState(resBtn, newResponseIntercept, 'RES')
+      this.updateItemBackground(item, request.intercepted, newResponseIntercept, methodBadge)
     })
 
-    // 初始化按钮状态
-    this.updateItemBackground(item, request.intercepted, request.responseIntercept)
-    reqBtn.style.background = request.intercepted ? '#ffc107' : 'rgba(255,255,255,0.1)'
-    reqBtn.style.color = request.intercepted ? '#000' : '#fff'
-    reqBtn.title = request.intercepted ? '取消请求拦截' : '启用请求拦截'
-    resBtn.style.background = request.responseIntercept ? '#13c2c2' : 'rgba(255,255,255,0.1)'
-    resBtn.style.color = request.responseIntercept ? '#000' : '#fff'
-    resBtn.title = request.responseIntercept ? '取消响应拦截' : '启用响应拦截'
+    // 初始化按钮状态和背景
+    this.updateItemBackground(item, request.intercepted, request.responseIntercept, methodBadge)
+    this.updateButtonState(reqBtn, request.intercepted, 'REQ')
+    this.updateButtonState(resBtn, request.responseIntercept, 'RES')
+  }
+
+  /**
+   * 更新按钮状态
+   */
+  updateButtonState(button, isActive, type) {
+    if (type === 'REQ') {
+      button.style.background = isActive ? '#ffc107' : 'rgba(255,255,255,0.1)'
+      button.style.color = isActive ? '#000' : '#fff'
+      button.title = isActive ? '取消请求拦截' : '启用请求拦截'
+    } else if (type === 'RES') {
+      button.style.background = isActive ? '#13c2c2' : 'rgba(255,255,255,0.1)'
+      button.style.color = isActive ? '#000' : '#fff'
+      button.title = isActive ? '取消响应拦截' : '启用响应拦截'
+    }
   }
 
   /**
    * 更新项目背景色
    */
-  updateItemBackground(item, intercepted, responseIntercept) {
+  updateItemBackground(item, intercepted, responseIntercept, methodBadge = null) {
     if (intercepted && responseIntercept) {
       // 同时选中：使用混合色渐变
       item.style.background = 'linear-gradient(135deg, rgba(255,193,7,0.15) 0%, rgba(19,194,194,0.15) 100%)'
       item.style.border = '1px solid rgba(255,165,0,0.4)'
+      if (methodBadge) {
+        methodBadge.style.background = '#ffc107'
+        methodBadge.style.color = '#000'
+      }
     } else if (intercepted) {
       // 仅请求拦截：淡黄色
       item.style.background = 'rgba(255,193,7,0.15)'
       item.style.border = '1px solid rgba(255,193,7,0.3)'
+      if (methodBadge) {
+        methodBadge.style.background = '#ffc107'
+        methodBadge.style.color = '#000'
+      }
     } else if (responseIntercept) {
       // 仅响应拦截：青色
       item.style.background = 'rgba(19,194,194,0.15)'
       item.style.border = '1px solid rgba(19,194,194,0.3)'
+      if (methodBadge) {
+        methodBadge.style.background = '#13c2c2'
+        methodBadge.style.color = '#000'
+      }
     } else {
       // 没有拦截：默认背景
       item.style.background = 'rgba(255,255,255,0.06)'
       item.style.border = '1px solid transparent'
+      if (methodBadge) {
+        methodBadge.style.background = '#0958d9'
+        methodBadge.style.color = '#fff'
+      }
     }
   }
 
@@ -1359,16 +1381,18 @@ export class DebugPanel {
       return
     }
 
-    const savedTogglePos = this.dependencies.storage.get('toggle_pos')
-    if (savedTogglePos) {
-      this.toggleBtn.style.left = savedTogglePos.x + 'px'
-      this.toggleBtn.style.top = savedTogglePos.y + 'px'
+    const saved = this.dependencies.storage.get('toggle_pos_rb')
+    if (saved && typeof saved.right === 'number' && typeof saved.bottom === 'number') {
+      this.toggleBtn.style.left = ''
+      this.toggleBtn.style.top = ''
+      this.toggleBtn.style.right = saved.right + 'px'
+      this.toggleBtn.style.bottom = saved.bottom + 'px'
     } else {
-      // 默认位置
-      const vw = window.innerWidth
-      const vh = window.innerHeight
-      this.toggleBtn.style.left = (vw - 60) + 'px'
-      this.toggleBtn.style.top = (vh - 60) + 'px'
+      // 默认贴近右下角
+      this.toggleBtn.style.left = ''
+      this.toggleBtn.style.top = ''
+      this.toggleBtn.style.right = '12px'
+      this.toggleBtn.style.bottom = '12px'
     }
   }
 
@@ -1377,9 +1401,9 @@ export class DebugPanel {
    */
   initDragging() {
     this.enableFollow = true
-    this.makeDraggable(this.toggleBtn, this.toggleBtn, (x, y) => {
+    this.makeDraggable(this.toggleBtn, this.toggleBtn, (right, bottom) => {
       if (this.dependencies.storage) {
-        this.dependencies.storage.set('toggle_pos', { x, y })
+        this.dependencies.storage.set('toggle_pos_rb', { right, bottom })
       }
     })
   }
@@ -1391,19 +1415,22 @@ export class DebugPanel {
     let dragging = false
     let startX = 0
     let startY = 0
-    let originLeft = 0
-    let originTop = 0
-    let currentX = 0
-    let currentY = 0
+    let originRight = 0
+    let originBottom = 0
+    let currentRight = 0
+    let currentBottom = 0
 
     const onMouseDown = (e) => {
       dragging = true
       startX = e.clientX
       startY = e.clientY
-      originLeft = this.getNumber(targetEl.style.left, 0)
-      originTop = this.getNumber(targetEl.style.top, 0)
-      currentX = originLeft
-      currentY = originTop
+      const vw = window.innerWidth
+      const vh = window.innerHeight
+      const rect = targetEl.getBoundingClientRect()
+      originRight = this.getNumber(targetEl.style.right, vw - rect.right)
+      originBottom = this.getNumber(targetEl.style.bottom, vh - rect.bottom)
+      currentRight = originRight
+      currentBottom = originBottom
       
       document.addEventListener('mousemove', onMouseMove)
       document.addEventListener('mouseup', onMouseUp)
@@ -1421,23 +1448,26 @@ export class DebugPanel {
       this.animationFrameId = requestAnimationFrame(() => {
         const dx = e.clientX - startX
         const dy = e.clientY - startY
-        
-        currentX = originLeft + dx
-        currentY = originTop + dy
-        
-        // 边界检查
-        const vw = window.innerWidth
-        const vh = window.innerHeight
-        const rect = targetEl.getBoundingClientRect()
-        
-        if (currentX < 0) currentX = 0
-        if (currentY < 0) currentY = 0
-        if (currentX > vw - rect.width) currentX = vw - rect.width
-        if (currentY > vh - rect.height) currentY = vh - rect.height
+        const vw2 = window.innerWidth
+        const vh2 = window.innerHeight
+        const rect2 = targetEl.getBoundingClientRect()
 
-        // 直接设置位置，跟随鼠标
-        targetEl.style.left = currentX + 'px'
-        targetEl.style.top = currentY + 'px'
+        currentRight = originRight - dx
+        currentBottom = originBottom - dy
+
+        // 边界检查（以 right/bottom 为基准）
+        const maxRight = vw2 - rect2.width
+        const maxBottom = vh2 - rect2.height
+        if (currentRight < 0) currentRight = 0
+        if (currentBottom < 0) currentBottom = 0
+        if (currentRight > maxRight) currentRight = maxRight
+        if (currentBottom > maxBottom) currentBottom = maxBottom
+
+        // 设置为靠右下定位
+        targetEl.style.left = ''
+        targetEl.style.top = ''
+        targetEl.style.right = currentRight + 'px'
+        targetEl.style.bottom = currentBottom + 'px'
         
         // 拖拽按钮时，面板始终跟随
         if (targetEl === this.toggleBtn && this.enableFollow && this.panel.style.display === 'block') {
@@ -1461,7 +1491,7 @@ export class DebugPanel {
       
       if (onSave) {
         try {
-          onSave(currentX, currentY)
+          onSave(currentRight, currentBottom)
         } catch (e) {
           console.error('Error saving position:', e)
         }
@@ -1488,26 +1518,23 @@ export class DebugPanel {
   positionPanelNearToggle() {
     const vw = window.innerWidth || document.documentElement.clientWidth
     const vh = window.innerHeight || document.documentElement.clientHeight
-
     const tRect = this.toggleBtn.getBoundingClientRect()
-    const panelWidth = 500
-    const panelHeight = 320
+    const panelWidth = 600
+    const panelHeight = 380
+    const gap = 12 // 与按钮的垂直间距
 
-    const gap = 16
-    let left = tRect.right - panelWidth
-    let top = tRect.top - panelHeight - gap
+    // 右对齐（无水平间距），稍微靠上（留出 gap）
+    let right = Math.max(0, vw - tRect.right)
+    let bottom = Math.max(0, vh - tRect.top + gap)
 
-    // 如果上方超出视口，尝试下方
-    if (top < 0) {
-      top = Math.min(vh - panelHeight, tRect.bottom + gap)
-    }
+    // 视口边界保护
+    if (right + panelWidth > vw - 8) right = Math.max(8, vw - panelWidth - 8)
+    if (bottom + panelHeight > vh - 8) bottom = Math.max(8, vh - panelHeight - 8)
 
-    // 限制在视口内
-    left = Math.min(Math.max(0, left), vw - panelWidth)
-    top = Math.min(Math.max(0, top), vh - panelHeight)
-
-    this.panel.style.left = left + 'px'
-    this.panel.style.top = top + 'px'
+    this.panel.style.left = ''
+    this.panel.style.top = ''
+    this.panel.style.right = right + 'px'
+    this.panel.style.bottom = bottom + 'px'
   }
 
   /**
@@ -1560,35 +1587,26 @@ export class DebugPanel {
    * 定位面板
    */
   positionPanel() {
-    const toggleRect = this.toggleBtn.getBoundingClientRect()
-    const panelWidth = 500
-    const panelHeight = 320
+    // 同样使用 right/bottom 基准
+    const tRect = this.toggleBtn.getBoundingClientRect()
     const vw = window.innerWidth
     const vh = window.innerHeight
-
-    let left = toggleRect.left - panelWidth - 10
-    let top = toggleRect.top
-
-    // 边界检查
-    if (left < 10) {
-      left = toggleRect.right + 10
-    }
-    if (top + panelHeight > vh - 10) {
-      top = vh - panelHeight - 10
-    }
-    if (top < 10) {
-      top = 10
-    }
-
-    this.panel.style.left = left + 'px'
-    this.panel.style.top = top + 'px'
+    const gap = 12
+    let right = Math.max(0, vw - tRect.right)
+    let bottom = Math.max(0, vh - tRect.top + gap)
+    if (right + 600 > vw - 8) right = Math.max(8, vw - 600 - 8)
+    if (bottom + 380 > vh - 8) bottom = Math.max(8, vh - 380 - 8)
+    this.panel.style.left = ''
+    this.panel.style.top = ''
+    this.panel.style.right = right + 'px'
+    this.panel.style.bottom = bottom + 'px'
   }
 
   /**
    * 切换标签页
    */
   switchTab(index) {
-    const tabs = Array.from(this.panel.querySelectorAll('div > button'))
+    const tabs = this.panel.querySelectorAll('#mini-debug-tabs > .mini-debug-tab-btn')
     const contents = this.panel.querySelectorAll('[id$="-tab"]')
 
     // 更新标签页内容显示

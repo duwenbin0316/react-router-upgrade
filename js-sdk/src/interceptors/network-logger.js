@@ -10,15 +10,21 @@ export class NetworkLogger {
     this.listeners = new Map() // 事件 -> Set<回调函数>
     this.uniqueRequests = new Map() // 存储唯一请求
     this.interceptRules = new Map() // URL -> intercept rule
+    this.storage = null // 存储管理器，在init时注入
   }
 
   /**
    * 初始化网络日志记录器
    */
-  init() {
+  init(storage) {
+    this.storage = storage
     this.interceptFetch()
     this.interceptXHR()
+
     // NetworkLogger initialized
+    setTimeout(() => {
+      this.loadInterceptRules() // 加载缓存的拦截规则
+    }, 0)
   }
 
   /**
@@ -620,7 +626,7 @@ export class NetworkLogger {
         responseIntercept: !!(rule && rule.responseLive)
       })
     }
-    
+
     // 通知请求列表更新
     this.notifyListeners('uniqueRequestsUpdated', this.uniqueRequests)
   }
@@ -659,7 +665,12 @@ export class NetworkLogger {
    */
   setRequestIntercept(url, enabled) {
     if (enabled) {
-      const rule = this.interceptRules.get(url) || { url, method: 'GET' }
+      let rule = this.interceptRules.get(url)
+      if (!rule) {
+        // 从 uniqueRequests 中获取正确的 method
+        const request = this.uniqueRequests.get(url)
+        rule = { url, method: request ? request.method : 'GET' }
+      }
       rule.requestLive = true
       this.interceptRules.set(url, rule)
     } else {
@@ -671,6 +682,7 @@ export class NetworkLogger {
         }
       }
     }
+    this.saveInterceptRules() // 保存拦截规则到缓存
     this.updateUniqueRequestInterceptStatus(url)
   }
 
@@ -679,7 +691,12 @@ export class NetworkLogger {
    */
   setResponseIntercept(url, enabled) {
     if (enabled) {
-      const rule = this.interceptRules.get(url) || { url, method: 'GET' }
+      let rule = this.interceptRules.get(url)
+      if (!rule) {
+        // 从 uniqueRequests 中获取正确的 method
+        const request = this.uniqueRequests.get(url)
+        rule = { url, method: request ? request.method : 'GET' }
+      }
       rule.responseLive = true
       this.interceptRules.set(url, rule)
     } else {
@@ -691,6 +708,7 @@ export class NetworkLogger {
         }
       }
     }
+    this.saveInterceptRules() // 保存拦截规则到缓存
     this.updateUniqueRequestInterceptStatus(url)
   }
 
@@ -747,7 +765,54 @@ export class NetworkLogger {
   clearUniqueRequests() {
     this.uniqueRequests.clear()
     this.interceptRules.clear()
+    this.saveInterceptRules() // 保存清空后的状态
     this.notifyListeners('uniqueRequestsUpdated', this.uniqueRequests)
+  }
+
+  /**
+   * 保存拦截规则到缓存
+   */
+  saveInterceptRules() {
+    if (!this.storage) return
+    
+    try {
+      // 将Map转换为普通对象
+      const rulesObj = {}
+      this.interceptRules.forEach((rule, url) => {
+        rulesObj[url] = rule
+      })
+      this.storage.set('intercept_rules', rulesObj)
+    } catch (error) {
+      console.warn('Failed to save intercept rules:', error)
+    }
+  }
+
+  /**
+   * 从缓存加载拦截规则
+   */
+  loadInterceptRules() {
+    if (!this.storage) return
+    
+    try {
+      const rulesObj = this.storage.get('intercept_rules', {})
+      // 将普通对象转换回Map
+      this.interceptRules.clear()
+      Object.entries(rulesObj).forEach(([url, rule]) => {
+        this.interceptRules.set(url, rule)
+        
+        // 直接调用现有的 updateUniqueRequests 方法，复用现有逻辑
+        this.updateUniqueRequests({
+          url: url,
+          method: rule.method || 'GET', // 保持原有逻辑，但确保缓存中有正确的 method
+          timeMs: Date.now()
+        })
+        
+        // 手动更新拦截状态，因为 updateUniqueRequests 不会自动设置拦截状态
+        this.updateUniqueRequestInterceptStatus(url)
+      })
+    } catch (error) {
+      console.warn('Failed to load intercept rules:', error)
+    }
   }
 
   /**

@@ -17,13 +17,13 @@ class ApolloSecurityTester {
       theme: 'auto',
       ...options
     }
-    
+
     this.networkLogger = new NetworkLogger()
     this.requestInterceptor = new RequestInterceptor()
     this.responseInterceptor = new ResponseInterceptor()
     this.debugPanel = new DebugPanel()
     this.storage = new StorageManager()
-    
+
     this.isInitialized = false
     this.isActive = false
   }
@@ -39,37 +39,37 @@ class ApolloSecurityTester {
 
     try {
       // 初始化网络拦截器
-      this.networkLogger.init()
+      this.networkLogger.init(this.storage)
       this.requestInterceptor.init()
       this.responseInterceptor.init()
-      
-          // 初始化调试面板
-          this.debugPanel.init({
-            networkLogger: this.networkLogger,
-            requestInterceptor: this.requestInterceptor,
-            responseInterceptor: this.responseInterceptor,
-            storage: this.storage,
-            ...this.options
-          })
 
-          // 设置编辑器回调
-          this.networkLogger.setEditors(
-            this.debugPanel.openRealtimeEditor.bind(this.debugPanel),
-            this.debugPanel.openResponseLiveEditor.bind(this.debugPanel)
-          )
-      
+      // 初始化调试面板
+      this.debugPanel.init({
+        networkLogger: this.networkLogger,
+        requestInterceptor: this.requestInterceptor,
+        responseInterceptor: this.responseInterceptor,
+        storage: this.storage,
+        ...this.options
+      })
+
+      // 设置编辑器回调
+      this.networkLogger.setEditors(
+        this.debugPanel.openRealtimeEditor.bind(this.debugPanel),
+        this.debugPanel.openResponseLiveEditor.bind(this.debugPanel)
+      )
+
       this.isInitialized = true
-      
+
       if (this.options.autoStart) {
         this.start()
       }
-      
+
       // MiniDebugSDK initialized successfully
     } catch (error) {
       // Failed to initialize MiniDebugSDK
       throw error
     }
-    
+
     return this
   }
 
@@ -80,15 +80,15 @@ class ApolloSecurityTester {
     if (!this.isInitialized) {
       throw new Error('SDK not initialized. Call init() first.')
     }
-    
+
     if (this.isActive) {
       console.warn('ApolloSecurityTester already active')
       return this
     }
-    
+
     // 只启动功能，面板默认关闭，需要用户手动点击切换按钮
     this.isActive = true
-    
+
     return this
   }
 
@@ -99,10 +99,10 @@ class ApolloSecurityTester {
     if (!this.isActive) {
       return this
     }
-    
+
     this.debugPanel.hide()
     this.isActive = false
-    
+
     return this
   }
 
@@ -111,15 +111,15 @@ class ApolloSecurityTester {
    */
   destroy() {
     this.stop()
-    
+
     this.networkLogger.destroy()
     this.requestInterceptor.destroy()
     this.responseInterceptor.destroy()
     this.debugPanel.destroy()
-    
+
     this.isInitialized = false
     this.isActive = false
-    
+
     return this
   }
 

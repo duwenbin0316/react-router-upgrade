@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>缓存功能简单测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f0f0f0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Apollo 安全测试工具 - 缓存功能测试</h1>
+        
+        <div>
+            <button onclick="testCache()">测试缓存功能</button>
+            <button onclick="clearAll()">清空所有数据</button>
+        </div>
+        
+        <div id="log" class="log">等待测试...</div>
+    </div>
+
+    <script type="module">
+        import ApolloSecurityTester from './dist/index.esm.js';
+
+        const log = document.getElementById('log');
+        
+        function addLog(message) {
+            log.textContent += new Date().toLocaleTimeString() + ': ' + message + '\n';
+        }
+
+        // 初始化工具
+        const tester = ApolloSecurityTester.init().start();
+        addLog('SDK 已初始化');
+
+        // 测试缓存功能
+        window.testCache = function() {
+            addLog('开始测试缓存功能...');
+            
+            // 1. 发送一些测试请求
+            addLog('发送测试请求...');
+            
+            fetch('https://httpbin.org/get?test=cache1')
+                .then(response => response.json())
+                .then(data => {
+                    addLog('GET 请求完成');
+                    return fetch('https://httpbin.org/post', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ test: 'cache2' })
+                    });
+                })
+                .then(response => response.json())
+                .then(data => {
+                    addLog('POST 请求完成');
+                    
+                    // 2. 等待一下让请求被记录
+                    setTimeout(() => {
+                        addLog('请手动在工具面板中设置一些拦截规则（REQ/RES）');
+                        addLog('设置完成后，点击"测试缓存恢复"按钮');
+                        
+                        // 添加测试缓存恢复按钮
+                        const testRestoreBtn = document.createElement('button');
+                        testRestoreBtn.textContent = '测试缓存恢复';
+                        testRestoreBtn.onclick = testCacheRestore;
+                        document.querySelector('.container').appendChild(testRestoreBtn);
+                    }, 2000);
+                })
+                .catch(error => {
+                    addLog('请求失败: ' + error.message);
+                });
+        };
+
+        // 测试缓存恢复
+        window.testCacheRestore = function() {
+            addLog('测试缓存恢复...');
+            
+            // 检查 localStorage 中的缓存
+            const cache = localStorage.getItem('__mini_debug_intercept_rules');
+            if (cache) {
+                addLog('找到缓存数据: ' + cache);
+                
+                // 重新初始化 SDK 来测试缓存恢复
+                tester.stop();
+                setTimeout(() => {
+                    const newTester = ApolloSecurityTester.init().start();
+                    addLog('SDK 重新初始化完成');
+                    addLog('请检查请求列表是否显示了之前设置的拦截规则');
+                }, 1000);
+            } else {
+                addLog('未找到缓存数据，请先设置一些拦截规则');
+            }
+        };
+
+        // 清空所有数据
+        window.clearAll = function() {
+            localStorage.removeItem('__mini_debug_intercept_rules');
+            localStorage.removeItem('__mini_debug_toggle_pos_rb');
+            addLog('所有缓存数据已清空');
+        };
+
+        addLog('测试页面已加载，点击"测试缓存功能"开始测试');
+    </script>
+</body>
+</html>
+
